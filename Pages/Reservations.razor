@@ -169,7 +169,7 @@
                 errorMessage = "The fields name and citizenship must be filled";
                 throw new Exception();
             }
-            else if (resStatus != "inactive" && resStatus != "active")
+            else if (resStatus.ToLower() != "inactive" && resStatus.ToLower() != "active")
             {
                 errorMessage = "The status must be inactive or active";
                 throw new Exception();
