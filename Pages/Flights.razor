@@ -1,0 +1,196 @@
+﻿@page "/flights"
+@using Assignment_2.Data
+@using Microsoft.Maui.Storage
+@using System.IO
+@using System.Text.Json
+
+<h3>Flight Finder</h3>
+<form class="finder">
+    <div>
+        <label for="From">From:</label>
+        <input placeholder="Any" @bind="from">
+    </div>
+    <div>
+        <label for="To">To:</label>
+        <input placeholder="Any" @bind="to">
+    </div>
+    <div>
+        <label for="Day">Day:</label>
+        <input placeholder="Any" @bind="day">
+    </div>
+    <div>
+        <button id="findButton" class="btn btn-primary" @onclick="addFlights" @onclick:preventDefault>Find flights</button>
+    </div>
+</form>
+
+<h3>Flights</h3>
+
+@if (!foundFlights.Any())
+{
+    <input value="No flights found" readonly />
+}
+<!-- Displays the list of the found flights-->
+@foreach (Flight flight in foundFlights)
+{
+    string flightInfo = flight.ToString();
+    <input @bind="flightInfo" @onclick=" (()=> fillReservation(flightInfo))" readonly />
+}
+
+<h3>Reserve</h3>
+
+<form id="reservation ">
+    <label for="Flight code">Flight code:</label>
+    <input @bind="resFlightCode" placeholder="Flight" readonly>
+    <label for="Airline">Airline:</label>
+    <input @bind="resAirline" placeholder="Airline" readonly>
+    <label for="Day">Day:</label>
+    <input @bind="resDay" placeholder="Day" readonly>
+    <label for="Time">Time:</label>
+    <input @bind="resTime" placeholder="Time" readonly>
+    <label for="Cost" readonly>Cost:</label>
+    <input @bind="resCost" placeholder=0 readonly>
+    <label for="Name">Name:</label>
+    <input @bind="resName" placeholder="Name">
+    <label for="Citizenship">Citizenship:</label>
+    <input @bind="resCitizenship" placeholder="Citizenship">
+</form>
+<div id="reserve">
+    <button id="reserveButton" class="btn btn-primary" @onclick="saveReservation">Reserve</button>
+    <p>@resCodeDisplay</p>
+</div>
+<style>
+    h3{
+        text-align: center;
+    }
+    label, input {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    .finder {
+        display: flex;
+    }
+    div {
+        width: 100%;
+        margin-right: 20px;
+    }
+
+    #findButton {
+        margin-top: 20px;
+        width: 100%;
+    }
+    #reserve{
+        text-align: center;
+    }
+    #reserveButton {
+        width: 300px;
+        margin-top: 10px;
+    }
+</style>
+
+@code {
+    FlightManager flightManager = new FlightManager();
+    private List<Flight> foundFlights = new();
+    private List<Flight> flights = FlightManager.GetFlights();
+    ReservationManager reservationManager = new ReservationManager();
+    private List<Reservation> reservations = ReservationManager.GetReservation();
+
+    private string from;
+    private string to;
+    private string day;
+    private string resCodeDisplay ="Reservation Code: ";
+    private string resFlightCode;
+    private string resAirline;
+    private string resDay;
+    private string resTime;
+    private double resCost;
+    private int seats;
+    private string resName;
+    private string resCitizenship;
+
+    /// <summary>
+    /// Clears the found flight list
+    /// and calls findFlights with the
+    /// users dept, dest, and day
+    /// </summary>
+    private void addFlights()
+    {
+        foundFlights = new();
+        foundFlights = findFlights(from, to, day);
+    }
+
+    /// <summary>
+    /// Returns a list of flights
+    /// that match the users dept,
+    /// dest, and day
+    /// </summary>
+    private List<Flight> findFlights(string from, string to, string day)
+    {
+        List<Flight> foundFlights = new List<Flight>();
+        foreach(Flight flight in flights)
+        {
+            if (from != null && flight.dept.ToLower() == from.ToLower() && to != null && flight.dest.ToLower() == to.ToLower() && day != null && flight.day.ToLower() == day.ToLower())
+            {
+                foundFlights.Add(flight);
+            }
+        }
+        return foundFlights;
+    }
+
+    /// <summary>
+    /// Populates the Reservation section
+    /// with the flight info
+    /// </summary>
+    private void fillReservation(string flight)
+    {
+        flight = flight.Replace(", ", ",");
+        string[] parts = flight.Split(",");
+        resFlightCode = parts[0];
+        resAirline = parts[1];
+        resDay = parts[4];
+        resTime = parts[5];
+        seats = int.Parse(parts[6]);
+        resCost = double.Parse(parts[7]);
+    }
+
+    /// <summary>
+    /// Saves the reservation to a binary file
+    /// if it is valid otherwise it displays an
+    /// error message. A resevation code is
+    /// created by calling generateCode.
+    /// </summary>
+    private async Task saveReservation()
+    {
+        string errorMessage = "";
+        try
+        {
+            
+            if (resFlightCode == "" || resFlightCode == null)
+            {
+                errorMessage = "Please select a fight";
+                throw new Exception();
+            } else if (seats == 0)
+            {
+                errorMessage = "The seceted flight has no seats available";
+                throw new Exception();
+            }
+            else if (resName == "" || resCitizenship == "" || resName == null || resCitizenship == null)
+            {
+                errorMessage = "The fields name and citizenship must be filled";
+                throw new Exception();
+            }
+            string resCode = reservationManager.generateCode();
+            resCodeDisplay = "Reservation Code: " + resCode;
+            Reservation reservation = new Reservation(resCode, resFlightCode, resAirline, resDay, resTime, resCost, resName, resCitizenship);
+            reservations.Add(reservation);
+            var contents = JsonSerializer.Serialize(reservations);
+            var path = Path.Combine(FileSystem.AppDataDirectory, "reservation.json");
+            File.WriteAllText(path, contents);
+            await App.Current.MainPage.DisplayAlert("Reservation Saved", $"Reservation has been saved to {path}", "OK");
+        }
+        catch
+        {
+            await App.Current.MainPage.DisplayAlert("Error ", errorMessage, "OK");
+        }
+    }
+}
