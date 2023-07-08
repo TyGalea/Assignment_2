@@ -32,7 +32,7 @@ namespace Assignment_2.Data
             reservations.AddRange(savedItems);
             for (int i = 0; i < reservations.Count; i++)
             {
-                if (reservations[i].status == "active")
+                if (reservations[i].status.ToLower() == "active")
                 {
                     reservations.RemoveAt(i);
                 }
