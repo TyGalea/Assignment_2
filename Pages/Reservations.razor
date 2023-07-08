@@ -164,7 +164,12 @@
         string errorMessage = "";
         try
         {
-            if (resName == "" || resCitizenship == "")
+            if (reservationCode == null)
+            {
+                errorMessage = "Please select a reservation";
+                throw new Exception();
+            }
+            else if (resName == "" || resCitizenship == "")
             {
                 errorMessage = "The fields name and citizenship must be filled";
                 throw new Exception();
